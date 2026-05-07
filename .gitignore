@@ -1,0 +1,11 @@
+.DS_Store
+Thumbs.db
+
+# Optional local package artifacts
+*.zip
+*.crx
+*.xpi
+
+# IDE or local workspace noise
+.vscode/*
+!.vscode/extensions.json

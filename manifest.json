@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "Live Subscriptions for YouTube",
+  "description": "See which YouTube channels you follow are live right now.",
+  "version": "0.1.0",
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Live YouTube Subscriptions"
+  },
+  "permissions": [
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://www.youtube.com/*",
+    "https://i.ytimg.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.youtube.com/*"
+      ],
+      "js": [
+        "youtube-sidebar.js"
+      ],
+      "css": [
+        "youtube-sidebar.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

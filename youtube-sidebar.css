@@ -1,0 +1,104 @@
+.yt-live-panel__section {
+  display: block;
+  margin: 0;
+  padding: 0;
+}
+
+#yt-live-subscriptions-panel.yt-live-panel {
+  display: block;
+  margin: 8px 12px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--yt-spec-10-percent-layer, rgba(255, 255, 255, 0.15));
+  background: var(--yt-spec-badge-chip-background, rgba(255, 255, 255, 0.08));
+  color: var(--yt-spec-text-primary, #fff);
+  font-family: "YouTube Sans", "Roboto", sans-serif;
+}
+
+.yt-live-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.yt-live-panel__title {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.yt-live-panel__status {
+  margin: 8px 0;
+  font-size: 1.2rem;
+  color: var(--yt-spec-text-secondary, #aaa);
+}
+
+.yt-live-panel__status--error {
+  color: #ff7f7f;
+}
+
+.yt-live-panel__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.yt-live-panel__see-all {
+  margin-top: 10px;
+  width: 100%;
+  border: 0;
+  border-radius: 999px;
+  padding: 7px 10px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--yt-spec-text-primary, #fff);
+}
+
+.yt-live-panel__see-all:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.yt-live-panel__item {
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  gap: 8px;
+  align-items: center;
+}
+
+.yt-live-panel__avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.yt-live-panel__meta {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.yt-live-panel__name,
+.yt-live-panel__watch {
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.yt-live-panel__name {
+  color: var(--yt-spec-text-primary, #fff);
+  font-size: 1.2rem;
+  font-weight: 500;
+}
+
+.yt-live-panel__watch {
+  color: #7cc8ff;
+  font-size: 1.1rem;
+}

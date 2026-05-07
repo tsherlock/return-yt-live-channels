@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Live YouTube Subscriptions</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="app-header">
+        <h1>Live Subscriptions</h1>
+      </header>
+
+      <nav class="tabs" role="tablist">
+        <button class="tab tab--active" id="tabLive" role="tab" aria-selected="true">Live</button>
+        <button class="tab" id="tabAll" role="tab" aria-selected="false">All Subscriptions</button>
+      </nav>
+
+      <section class="tab-panel" id="panelLive">
+        <div class="channels-toolbar">
+          <span id="liveCount" class="channel-count"></span>
+          <button id="refreshLiveBtn">Refresh Live</button>
+        </div>
+        <p id="liveHint" class="note" hidden></p>
+        <ul id="liveList" class="channel-list"></ul>
+      </section>
+
+      <section class="tab-panel tab-panel--hidden" id="panelAll">
+        <div class="channels-toolbar">
+          <span id="channelCount" class="channel-count"></span>
+          <button id="scanBtn">Scan from YouTube</button>
+        </div>
+        <p id="scanHint" class="note">Open YouTube, expand the Subscriptions section in the sidebar, then click Scan. Scan adds new channels and updates names/images; Included/Excluded controls whether a channel appears in the Live Subscriptions list; use X for manual removal.</p>
+        <ul id="channelList" class="channel-list"></ul>
+      </section>
+    </main>
+
+    <script src="popup.js" type="module"></script>
+  </body>
+</html>
+
