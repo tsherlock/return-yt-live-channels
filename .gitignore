@@ -6,6 +6,10 @@ Thumbs.db
 *.crx
 *.xpi
 
+# Local development/utility scripts (not part of public repo)
+generate_icons.py
+STORE_SUBMISSION.md
+
 # IDE or local workspace noise
 .vscode/*
 !.vscode/extensions.json

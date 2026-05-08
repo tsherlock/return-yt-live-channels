@@ -1,4 +1,4 @@
-# Live Subscriptions for YouTube
+# Return YouTube Live Subscriptions
 
 This extension adds a "Live Subscriptions" section to the YouTube left sidebar.
 

@@ -1,15 +1,6 @@
 const LIVE_CACHE_TTL_MS = 10 * 60 * 1000;
 const LIVE_CACHE_KEY = "liveChannelsCacheV3";
 const CHANNEL_LIST_KEY = "channelListV1";
-const EXCLUDED_CHANNEL_PATHS = new Set([
-  "/channel/UC-9-kyTW8ZkZNDHQJ6FgpwQ",
-  "/channel/UCkYQyvc_i9hXEo4xic9Hh2g",
-  "/channel/UCEgdi0XIXXZ-qJOFPf4JSKw",
-  "/channel/UCrpQ4p1Ql_hG8rKXIKM1MOQ",
-  "/channel/UCtFRv9O2AHqOZjjynzrv-xg",
-  "/channel/UCYfdidRxbB8Qhf0Nx7ioOYw",
-  "/channel/UC4R8DWoMoI7CAwX8_LjQHig"
-]);
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type !== "GET_LIVE_CHANNELS") {
@@ -209,7 +200,7 @@ function sanitizeChannels(channels) {
 
   for (const channel of channels || []) {
     const normalizedPath = normalizeChannelPath(channel?.urlPath || "");
-    if (!normalizedPath || EXCLUDED_CHANNEL_PATHS.has(normalizedPath)) {
+    if (!normalizedPath) {
       continue;
     }
 

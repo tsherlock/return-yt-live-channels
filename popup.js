@@ -1,4 +1,6 @@
 const CHANNEL_LIST_KEY = "channelListV1";
+
+// These are youtube's official channels like "Shopping", "Music", etc that show up in the sidebar that we want to ignore.
 const EXCLUDED_CHANNEL_PATHS = new Set([
   "/channel/UC-9-kyTW8ZkZNDHQJ6FgpwQ",
   "/channel/UCkYQyvc_i9hXEo4xic9Hh2g",
@@ -145,7 +147,6 @@ async function scanFromYouTube() {
     }
 
     const existing = await getChannelList();
-    const existingByPath = new Map(existing.map((c) => [normalizeChannelPath(c.urlPath), c]));
     const scrapedSanitized = sanitizeChannels(scraped);
 
     // Non-destructive scan: add/update from scraped channels, never auto-remove.
@@ -154,13 +155,14 @@ async function scanFromYouTube() {
 
     for (const channel of scrapedSanitized) {
       const key = normalizeChannelPath(channel.urlPath);
-      const prev = existingByPath.get(key);
+      const prev = mergedByPath.get(key);
       if (!prev) {
         added += 1;
       }
 
       mergedByPath.set(key, {
         ...channel,
+        thumbnailUrl: channel.thumbnailUrl || prev?.thumbnailUrl || "",
         excludeFromLive: Boolean(prev?.excludeFromLive)
       });
     }

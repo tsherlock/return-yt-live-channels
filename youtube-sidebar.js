@@ -1,15 +1,6 @@
 const PANEL_ID = "yt-live-subscriptions-panel";
 const DEFAULT_VISIBLE_CHANNELS = 8;
 const AUTO_REFRESH_MS = 30 * 1000;
-const EXCLUDED_CHANNEL_PATHS = new Set([
-  "/channel/UC-9-kyTW8ZkZNDHQJ6FgpwQ",
-  "/channel/UCkYQyvc_i9hXEo4xic9Hh2g",
-  "/channel/UCEgdi0XIXXZ-qJOFPf4JSKw",
-  "/channel/UCrpQ4p1Ql_hG8rKXIKM1MOQ",
-  "/channel/UCtFRv9O2AHqOZjjynzrv-xg",
-  "/channel/UCYfdidRxbB8Qhf0Nx7ioOYw",
-  "/channel/UC4R8DWoMoI7CAwX8_LjQHig"
-]);
 
 let allLiveChannels = [];
 let showAllChannels = false;
@@ -393,23 +384,28 @@ function scrapeEntriesInto(entries, channels) {
       continue;
     }
 
-    if (EXCLUDED_CHANNEL_PATHS.has(normalizedHref)) {
-      continue;
-    }
-
     // Deduplicate by urlPath
     if (channels.some((c) => c.urlPath === normalizedHref)) {
       continue;
     }
 
     const img = entry.querySelector("img");
+    const imgShadow = entry.querySelector("yt-img-shadow");
     const titleEl = entry.querySelector("#title, yt-formatted-string#title");
     const title = titleEl?.textContent?.trim() || href;
+
+    // img.src may be empty for lazy-loaded off-screen avatars;
+    // fall back to yt-img-shadow[data-thumb] if available.
+    const thumbnailUrl =
+      (img?.src && img.src.startsWith("http") ? img.src : "") ||
+      imgShadow?.getAttribute("data-thumb") ||
+      img?.getAttribute("data-thumb") ||
+      "";
 
     channels.push({
       urlPath: normalizedHref,
       title,
-      thumbnailUrl: img?.src || ""
+      thumbnailUrl
     });
   }
 }
