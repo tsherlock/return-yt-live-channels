@@ -26,11 +26,40 @@ This extension adds a "Live Subscriptions" section to the YouTube left sidebar.
 
 ## Load in Chrome
 
-1. Open `chrome://extensions`.
-2. Enable Developer mode.
-3. Click "Load unpacked" and choose this folder.
-4. Open YouTube and expand your Subscriptions section in the left sidebar.
-5. Open the extension popup and click "Scan from YouTube".
+### Option 1: Direct (development)
+
+1. Run `bash build.sh` to assemble the Chrome build
+2. Open `chrome://extensions`
+3. Enable Developer mode
+4. Click "Load unpacked" and choose `build/chrome/`
+5. Open YouTube and expand your Subscriptions section in the left sidebar
+6. Open the extension popup and click "Scan from YouTube"
+
+### Option 2: From source (for developers)
+
+1. Open `chrome://extensions`
+2. Enable Developer mode
+3. Click "Load unpacked" and choose the repo root
+4. Click the extension puzzle icon → "Manage extensions" → check that `packages/shared/` files are loaded
+5. Open YouTube and expand your Subscriptions, then scan
+
+## Development
+
+This repo uses a monorepo structure for multi-browser support:
+
+```
+packages/
+├── shared/        # Shared source code (cross-browser)
+│   ├── background.js, popup.*, youtube-sidebar.*
+│   ├── icons/
+│   └── PRIVACY.md
+└── chrome/        # Chrome-specific (MV3 manifest only)
+    └── manifest.json
+```
+
+**Build for Chrome:** `bash build.sh` → creates `build/chrome/`
+
+**Future Firefox support:** Will add `packages/firefox/` with MV2 manifest, then update `build.sh` to support building Firefox variant.
 
 ## Notes
 
