@@ -1,52 +1,144 @@
 const PANEL_ID = "yt-live-subscriptions-panel";
 const DEFAULT_VISIBLE_CHANNELS = 8;
 const AUTO_REFRESH_MS = 30 * 1000;
+const MOUNT_RETRY_DELAYS_MS = [0, 150, 350, 700, 1200, 2000, 3200, 5000];
 
 let allLiveChannels = [];
 let showAllChannels = false;
 let autoRefreshTimer = null;
+let sidebarObserver = null;
+let guideObserver = null;
+let guideObserverTarget = null;
+let mountRunId = 0;
 
-function ensurePanelMounted() {
+function removePanelContainer() {
+  const panel = document.getElementById(PANEL_ID);
+  if (!panel) {
+    return;
+  }
+
+  const wrapper = panel.closest(".yt-live-panel__section");
+  if (wrapper && wrapper.parentNode) {
+    wrapper.parentNode.removeChild(wrapper);
+    return;
+  }
+
+  if (panel.parentNode) {
+    panel.parentNode.removeChild(panel);
+  }
+}
+
+function isPanelHealthy(panel) {
+  if (!panel || !panel.isConnected) {
+    return false;
+  }
+
+  if (!panel.closest("ytd-guide-renderer")) {
+    return false;
+  }
+
+  // Parent containers can be replaced during SPA navigation; keep existing
+  // connected panels instead of forcing remount churn.
+  return true;
+}
+
+function safeInsertPanel(wrapper, insertionPoint) {
+  const parent = insertionPoint?.parent;
+  if (!parent || !parent.isConnected) {
+    return false;
+  }
+
+  const beforeNode = insertionPoint.beforeNode;
+  if (beforeNode && beforeNode.parentNode === parent) {
+    parent.insertBefore(wrapper, beforeNode);
+    return true;
+  }
+
+  // Fallback when YouTube mutates DOM between lookup and insertion.
+  // Recompute the anchor once before falling back to append.
+  const refreshedInsertionPoint = findInsertionPoint();
+  const refreshedParent = refreshedInsertionPoint?.parent;
+  const refreshedBeforeNode = refreshedInsertionPoint?.beforeNode;
+
+  if (
+    refreshedParent &&
+    refreshedParent.isConnected &&
+    refreshedBeforeNode &&
+    refreshedBeforeNode.parentNode === refreshedParent
+  ) {
+    refreshedParent.insertBefore(wrapper, refreshedBeforeNode);
+    return true;
+  }
+
+  parent.appendChild(wrapper);
+  return true;
+}
+
+function ensurePanelMounted(source = "unknown") {
+  const existingPanel = document.getElementById(PANEL_ID);
+  if (existingPanel && !existingPanel.closest("ytd-guide-renderer")) {
+    removePanelContainer();
+  }
+
   const insertionPoint = findInsertionPoint();
   if (!insertionPoint) {
     return;
   }
 
-  if (document.getElementById(PANEL_ID)) {
+  const currentPanel = document.getElementById(PANEL_ID);
+  if (currentPanel && isPanelHealthy(currentPanel)) {
     return;
   }
 
+  if (currentPanel) {
+    removePanelContainer();
+  }
+
   const panel = buildPanel();
-  insertionPoint.parent.insertBefore(panel, insertionPoint.beforeNode);
+  const inserted = safeInsertPanel(panel, insertionPoint);
+  if (!inserted) {
+    return;
+  }
   loadPanelData({ forceRefresh: false });
 }
 
 function findInsertionPoint() {
-  const sections = Array.from(
-    document.querySelectorAll("ytd-guide-renderer ytd-guide-section-renderer")
-  );
-
-  if (sections.length >= 1 && sections[0].parentElement) {
-    return {
-      parent: sections[0].parentElement,
-      beforeNode: sections[0].nextElementSibling
-    };
-  }
-
   const subscriptionsLink = document.querySelector(
-    "a#endpoint[href='/feed/subscriptions'], a#endpoint[href*='/feed/subscriptions']"
+    "ytd-guide-renderer a#endpoint[href='/feed/subscriptions'], ytd-guide-renderer a#endpoint[href*='/feed/subscriptions']"
   );
 
   if (subscriptionsLink) {
     const subscriptionEntry = subscriptionsLink.closest(
-      "ytd-guide-entry-renderer, ytd-mini-guide-entry-renderer"
+      "ytd-guide-entry-renderer"
     );
+    const subscriptionSection = subscriptionsLink.closest("ytd-guide-section-renderer");
+
+    if (subscriptionSection && subscriptionSection.parentElement) {
+      return {
+        parent: subscriptionSection.parentElement,
+        // Insert above the Subscriptions section.
+        beforeNode: subscriptionSection
+      };
+    }
+
     if (subscriptionEntry && subscriptionEntry.parentElement) {
       return {
         parent: subscriptionEntry.parentElement,
-        beforeNode: subscriptionEntry.nextElementSibling
+        // Insert above the Subscriptions entry when section wrapper isn't available.
+        beforeNode: subscriptionEntry
       };
     }
+  }
+
+  const firstGuideSection = document.querySelector(
+    "ytd-guide-renderer ytd-guide-section-renderer"
+  );
+
+  if (firstGuideSection && firstGuideSection.parentElement) {
+    return {
+      parent: firstGuideSection.parentElement,
+      beforeNode: firstGuideSection
+    };
   }
 
   return null;
@@ -244,38 +336,66 @@ async function loadPanelData({ forceRefresh }) {
   }
 }
 
+function disconnectSidebarObservers() {
+  if (sidebarObserver) {
+    sidebarObserver.disconnect();
+    sidebarObserver = null;
+  }
+
+  if (guideObserver) {
+    guideObserver.disconnect();
+    guideObserver = null;
+  }
+
+  guideObserverTarget = null;
+}
+
 function watchForSidebar() {
+  disconnectSidebarObservers();
+
   let debounceTimer = null;
 
-  const observer = new MutationObserver(() => {
-    if (document.getElementById(PANEL_ID)) {
-      return;
-    }
+  sidebarObserver = new MutationObserver(() => {
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
-      ensurePanelMounted();
-    }, 300);
+      queueEnsurePanelMounted("sidebar-observer");
+    }, 200);
   });
 
-  // Watch only the guide container, not the whole document
-  const tryObserve = () => {
-    const guide = document.querySelector("ytd-guide-renderer, ytd-mini-guide-renderer");
-    if (guide) {
-      observer.observe(guide, { childList: true, subtree: true });
-    } else {
-      // Guide not yet in DOM — wait for it on the body
-      const bodyObserver = new MutationObserver(() => {
-        const g = document.querySelector("ytd-guide-renderer, ytd-mini-guide-renderer");
-        if (g) {
-          bodyObserver.disconnect();
-          observer.observe(g, { childList: true, subtree: true });
-        }
-      });
-      bodyObserver.observe(document.body, { childList: true, subtree: false });
+  const bindToGuide = () => {
+    const guide = document.querySelector("ytd-guide-renderer");
+    if (!guide) {
+      return false;
     }
+
+    if (guideObserverTarget === guide) {
+      return true;
+    }
+
+    if (sidebarObserver) {
+      sidebarObserver.disconnect();
+      sidebarObserver.observe(guide, { childList: true, subtree: true });
+    }
+
+    guideObserverTarget = guide;
+    return true;
   };
 
-  tryObserve();
+  if (bindToGuide()) {
+    return;
+  }
+
+  guideObserver = new MutationObserver(() => {
+    if (bindToGuide()) {
+      guideObserver.disconnect();
+      guideObserver = null;
+      queueEnsurePanelMounted("guide-observer");
+    }
+  });
+
+  if (document.body) {
+    guideObserver.observe(document.body, { childList: true, subtree: true });
+  }
 }
 
 function startAutoRefresh() {
@@ -288,30 +408,42 @@ function startAutoRefresh() {
       return;
     }
 
-    if (document.getElementById(PANEL_ID)) {
+    const panel = document.getElementById(PANEL_ID);
+    if (panel && panel.isConnected) {
       loadPanelData({ forceRefresh: true });
     } else {
-      ensurePanelMounted();
+      queueEnsurePanelMounted("auto-refresh-mount");
     }
   }, AUTO_REFRESH_MS);
 }
 
-function queueEnsurePanelMounted() {
-  ensurePanelMounted();
-  window.setTimeout(ensurePanelMounted, 250);
-  window.setTimeout(ensurePanelMounted, 1000);
+function queueEnsurePanelMounted(source = "unknown") {
+  mountRunId += 1;
+  const currentRunId = mountRunId;
+
+  MOUNT_RETRY_DELAYS_MS.forEach((delayMs, attempt) => {
+    window.setTimeout(() => {
+      if (currentRunId !== mountRunId) {
+        return;
+      }
+
+      ensurePanelMounted(`${source}#${attempt}`);
+    }, delayMs);
+  });
 }
 
 window.addEventListener("yt-navigate-finish", () => {
-  queueEnsurePanelMounted();
+  watchForSidebar();
+  queueEnsurePanelMounted("yt-navigate-finish");
 });
 
 window.addEventListener("yt-page-data-updated", () => {
-  queueEnsurePanelMounted();
+  watchForSidebar();
+  queueEnsurePanelMounted("yt-page-data-updated");
 });
 
 (async function bootstrap() {
-  ensurePanelMounted();
+  queueEnsurePanelMounted("bootstrap");
   watchForSidebar();
   startAutoRefresh();
 })();

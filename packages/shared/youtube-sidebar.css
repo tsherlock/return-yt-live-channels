@@ -1,5 +1,8 @@
 .yt-live-panel__section {
   display: block;
+  width: 100%;
+  flex: 1 0 100%;
+  align-self: stretch;
   margin: 0;
   padding: 0;
 }
