@@ -219,14 +219,6 @@ function updateSeeAllButton(totalChannels) {
   nodes.seeAll.textContent = showAllChannels ? "Show Less" : "See All";
 }
 
-function formatViewerCount(count) {
-  if (!count) {
-    return "Live now";
-  }
-
-  return `${new Intl.NumberFormat().format(count)} watching`;
-}
-
 function renderChannels(channels) {
   const nodes = getPanelNodes();
   if (!nodes) {
@@ -262,7 +254,7 @@ function renderChannels(channels) {
     const watchLink = document.createElement("a");
     watchLink.className = "yt-live-panel__watch";
     watchLink.href = channel.liveVideoId ? `/watch?v=${channel.liveVideoId}` : (channel.urlPath || "/feed/subscriptions");
-    watchLink.textContent = formatViewerCount(channel.viewerCount);
+    watchLink.textContent = "Watch live";
 
     meta.appendChild(nameLink);
     meta.appendChild(watchLink);

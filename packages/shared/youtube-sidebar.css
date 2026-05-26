@@ -104,4 +104,11 @@
 .yt-live-panel__watch {
   color: #7cc8ff;
   font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.yt-live-panel__watch:hover {
+  color: #c4e7ff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }

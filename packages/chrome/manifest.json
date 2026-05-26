@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Return YouTube Live Subscriptions",
   "description": "See which YouTube channels you subscribe to are live right now.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
