@@ -52,16 +52,6 @@ This extension adds a "Live Subscriptions" section to the YouTube left sidebar.
 5. Open `https://www.youtube.com/feed/channels` and scroll down once
 6. Open the extension popup and click "Scan from YouTube"
 
-### Firefox temporary add-on troubleshooting
-
-If the popup appears as a small blank white panel, this is usually a loading path or stale temporary add-on issue.
-
-1. In `about:debugging#/runtime/this-firefox`, remove any existing "Return YouTube Live Subscriptions" temporary add-on entries.
-2. Run `bash build.sh` again.
-3. Load only `build/firefox/manifest.json` (do not load `packages/firefox/manifest.json`).
-4. Click Inspect on the extension and confirm the popup URL is a `moz-extension://.../popup.html` page.
-5. In popup DevTools Console, check for failed resource loads (404 for `popup.js` or `popup.css`) which indicates the wrong folder was loaded.
-
 ## Development
 
 This repo uses a monorepo structure for multi-browser support:
