@@ -121,26 +121,11 @@ async function scanFromYouTube() {
   scanBtn.textContent = "Scanning…";
 
   try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-
-    if (!tab || !tab.url || !tab.url.includes("youtube.com")) {
-      setScanHint("Please open YouTube first, then click Scan.", true);
-      return;
-    }
-
-    const scraped = await new Promise((resolve, reject) => {
-      chrome.tabs.sendMessage(tab.id, { type: "SCRAPE_SUBSCRIPTIONS" }, (result) => {
-        if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message));
-        } else {
-          resolve(result || []);
-        }
-      });
-    });
+    const scraped = await scrapeSubscriptionsFromChannelsPage();
 
     if (!scraped.length) {
       setScanHint(
-        "No channels found. Make sure the Subscriptions section in the YouTube sidebar is expanded.",
+        "No channels found. Open https://www.youtube.com/feed/channels, scroll to the bottom, then scan again.",
         true
       );
       return;
@@ -182,6 +167,82 @@ async function scanFromYouTube() {
   } finally {
     scanBtn.disabled = false;
     scanBtn.textContent = "Scan from YouTube";
+  }
+}
+
+async function scrapeSubscriptionsFromChannelsPage() {
+  const [activeTab] = await tabsQuery({ active: true, currentWindow: true });
+
+  if (activeTab?.id && isYouTubeChannelsPage(activeTab.url || "")) {
+    return sendScrapeMessage(activeTab.id);
+  }
+
+  const tempTab = await tabsCreate({
+    url: "https://www.youtube.com/feed/channels",
+    active: false
+  });
+
+  try {
+    await waitForTabComplete(tempTab.id);
+    return await sendScrapeMessage(tempTab.id);
+  } finally {
+    if (tempTab?.id) {
+      try {
+        await tabsRemove(tempTab.id);
+      } catch {
+        // Ignore cleanup failures.
+      }
+    }
+  }
+}
+
+function sendScrapeMessage(tabId) {
+  return tabsSendMessage(tabId, { type: "SCRAPE_SUBSCRIPTIONS" }).then((result) => result || []);
+}
+
+function waitForTabComplete(tabId) {
+  return new Promise((resolve, reject) => {
+    const timeoutId = window.setTimeout(() => {
+      chrome.tabs.onUpdated.removeListener(listener);
+      reject(new Error("Timed out waiting for the subscriptions page to load."));
+    }, 10000);
+
+    const finish = () => {
+      window.clearTimeout(timeoutId);
+      chrome.tabs.onUpdated.removeListener(listener);
+      resolve();
+    };
+
+    const listener = (updatedTabId, changeInfo) => {
+      if (updatedTabId !== tabId) {
+        return;
+      }
+
+      if (changeInfo.status === "complete") {
+        finish();
+      }
+    };
+
+    tabsGet(tabId).then((tab) => {
+      if (tab?.status === "complete") {
+        window.clearTimeout(timeoutId);
+        resolve();
+        return;
+      }
+
+      chrome.tabs.onUpdated.addListener(listener);
+    }).catch((error) => {
+      window.clearTimeout(timeoutId);
+      reject(error);
+    });
+  });
+}
+
+function isYouTubeChannelsPage(url) {
+  try {
+    return new URL(url).pathname === "/feed/channels";
+  } catch {
+    return false;
   }
 }
 
@@ -382,16 +443,94 @@ function toYouTubeUrl(path) {
 }
 
 async function openInActiveTab(url) {
-  const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const [activeTab] = await tabsQuery({ active: true, currentWindow: true });
 
   if (activeTab?.id) {
-    await chrome.tabs.update(activeTab.id, { url });
+    await tabsUpdate(activeTab.id, { url });
     window.close();
     return;
   }
 
-  await chrome.tabs.create({ url });
+  await tabsCreate({ url });
   window.close();
+}
+
+function tabsQuery(queryInfo) {
+  return new Promise((resolve, reject) => {
+    chrome.tabs.query(queryInfo, (tabs) => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+        return;
+      }
+
+      resolve(Array.isArray(tabs) ? tabs : []);
+    });
+  });
+}
+
+function tabsCreate(createProperties) {
+  return new Promise((resolve, reject) => {
+    chrome.tabs.create(createProperties, (tab) => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+        return;
+      }
+
+      resolve(tab || null);
+    });
+  });
+}
+
+function tabsRemove(tabId) {
+  return new Promise((resolve, reject) => {
+    chrome.tabs.remove(tabId, () => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+        return;
+      }
+
+      resolve();
+    });
+  });
+}
+
+function tabsUpdate(tabId, updateProperties) {
+  return new Promise((resolve, reject) => {
+    chrome.tabs.update(tabId, updateProperties, (tab) => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+        return;
+      }
+
+      resolve(tab || null);
+    });
+  });
+}
+
+function tabsGet(tabId) {
+  return new Promise((resolve, reject) => {
+    chrome.tabs.get(tabId, (tab) => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+        return;
+      }
+
+      resolve(tab || null);
+    });
+  });
+}
+
+function tabsSendMessage(tabId, message) {
+  return new Promise((resolve, reject) => {
+    chrome.tabs.sendMessage(tabId, message, (result) => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+        return;
+      }
+
+      resolve(result);
+    });
+  });
 }
 
 function getDisplayTitle(rawTitle, normalizedPath) {

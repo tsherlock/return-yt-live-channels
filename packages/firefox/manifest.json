@@ -1,5 +1,5 @@
 {
-  "manifest_version": 3,
+  "manifest_version": 2,
   "name": "Return YouTube Live Subscriptions",
   "description": "See which YouTube channels you subscribe to are live right now.",
   "version": "0.1.0",
@@ -10,9 +10,11 @@
     "128": "icons/icon128.png"
   },
   "background": {
-    "service_worker": "background.js"
+    "scripts": [
+      "background.js"
+    ]
   },
-  "action": {
+  "browser_action": {
     "default_popup": "popup.html",
     "default_title": "Return YouTube Live Subscriptions",
     "default_icon": {
@@ -24,9 +26,7 @@
   },
   "permissions": [
     "storage",
-    "tabs"
-  ],
-  "host_permissions": [
+    "tabs",
     "https://www.youtube.com/*"
   ],
   "content_scripts": [
@@ -43,5 +43,10 @@
       ],
       "run_at": "document_idle"
     }
-  ]
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "return-yt-live-subscriptions@tsherlock.dev"
+    }
+  }
 }
