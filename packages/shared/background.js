@@ -2,6 +2,11 @@ const LIVE_CACHE_TTL_MS = 10 * 60 * 1000;
 const LIVE_CACHE_KEY = "liveChannelsCacheV3";
 const CHANNEL_LIST_KEY = "channelListV1";
 
+// Utility: sleep with Promise
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type !== "GET_LIVE_CHANNELS") {
     return false;
@@ -177,8 +182,9 @@ async function loadLiveChannels({ forceRefresh = false } = {}) {
     return [];
   }
 
-  // Check in batches of 10 to avoid hammering YouTube
-  const BATCH_SIZE = 10;
+  // Check in batches of 3 to avoid hammering YouTube, with a delay between batches
+  const BATCH_SIZE = 3;
+  const BATCH_DELAY_MS = 3000;
   const liveChannels = [];
 
   for (let i = 0; i < channels.length; i += BATCH_SIZE) {
@@ -190,7 +196,12 @@ async function loadLiveChannels({ forceRefresh = false } = {}) {
         liveChannels.push(result.value);
       }
     }
+
+    if (i + BATCH_SIZE < channels.length) {
+      await sleep(BATCH_DELAY_MS);
+    }
   }
+
   await saveCache(LIVE_CACHE_KEY, liveChannels);
   return liveChannels;
 }
