@@ -1,0 +1,259 @@
+:root {
+  color-scheme: dark;
+  --bg: #0f172a;
+  --panel: #111827;
+  --text: #f8fafc;
+  --muted: #94a3b8;
+  --line: #334155;
+  --accent: #22c55e;
+  --accent-strong: #16a34a;
+  --warn: #f59e0b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+  background:
+    radial-gradient(1200px 500px at 22% -15%, #1e293b 0%, rgba(30, 41, 59, 0) 60%),
+    linear-gradient(180deg, #0b1222 0%, var(--bg) 100%);
+  color: var(--text);
+}
+
+.page {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 28px 20px 36px;
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: 1.9rem;
+  letter-spacing: 0.01em;
+}
+
+.hero p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  max-width: 760px;
+  line-height: 1.45;
+}
+
+.panel {
+  margin-top: 22px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  box-shadow: 0 16px 32px rgba(3, 8, 20, 0.5);
+}
+
+.panel__header {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.panel__header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.summary {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.lists-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 14px;
+  padding: 14px;
+}
+
+.list-column {
+  border: 1px solid #223247;
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(15, 27, 48, 0.45);
+}
+
+.list-column__title {
+  margin: 0;
+  padding: 12px 14px 0;
+  font-size: 0.95rem;
+}
+
+.list-column__hint {
+  margin: 4px 0 0;
+  padding: 0 14px 12px;
+  color: #8aa0b8;
+  font-size: 0.78rem;
+}
+
+.channel-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.channel-table--excluded {
+  table-layout: fixed;
+}
+
+.channel-table th,
+.channel-table td {
+  text-align: left;
+  padding: 12px 14px;
+  border-bottom: 1px solid #223247;
+  vertical-align: middle;
+}
+
+.channel-table thead th {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #8aa0b8;
+  background: #0f1b30;
+}
+
+.channel-row--excluded .channel-name {
+  color: #7e8fa1;
+}
+
+.channel-row--excluded .channel-meta {
+  color: #667789;
+}
+
+.empty-cell {
+  color: #8aa0b8;
+  font-size: 0.82rem;
+  font-style: italic;
+}
+
+.channel-row {
+  cursor: grab;
+}
+
+.channel-row:active {
+  cursor: grabbing;
+}
+
+.channel-row--dragging {
+  opacity: 0.5;
+}
+
+.channel-row--drop-target {
+  box-shadow: inset 0 2px 0 0 #7cc8ff;
+}
+
+.channel-cell {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.channel-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #1f2f44;
+}
+
+.channel-name {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.channel-meta {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toggle-btn {
+  border: 1px solid #334155;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  padding: 7px 12px;
+  cursor: pointer;
+}
+
+.toggle-btn--exclude {
+  border-color: rgba(245, 158, 11, 0.55);
+  color: #fed7aa;
+  background: rgba(245, 158, 11, 0.14);
+}
+
+.priority-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.drag-handle {
+  color: #7cc8ff;
+  font-size: 0.95rem;
+  letter-spacing: 0.1em;
+  user-select: none;
+}
+
+.priority-impact {
+  color: #8fb6dc;
+  font-size: 0.8rem;
+}
+
+.priority-rank {
+  display: inline-block;
+  min-width: 2.2em;
+  color: #f8fafc;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.status {
+  margin-top: 14px;
+  color: #86efac;
+  font-size: 0.9rem;
+}
+
+.status--error {
+  color: #b91c1c;
+}
+
+@media (max-width: 720px) {
+  .page {
+    padding: 20px 14px 28px;
+  }
+
+  .hero h1 {
+    font-size: 1.5rem;
+  }
+
+  .lists-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .channel-table,
+  .channel-table--excluded {
+    table-layout: auto;
+  }
+}

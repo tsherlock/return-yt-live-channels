@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Live Subscriptions Priority Settings</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main class="page">
+      <header class="hero">
+        <h1>Channel Priority Settings</h1>
+        <p>
+          Manage which channels are included in live checks and drag channels to set priority.
+          Higher rows receive higher userBoost automatically.
+        </p>
+      </header>
+
+      <section class="panel" aria-labelledby="channelSettingsHeading">
+        <div class="panel__header">
+          <h2 id="channelSettingsHeading">Your Channels</h2>
+          <p id="summary" class="summary"></p>
+        </div>
+
+        <div class="lists-grid">
+          <section class="list-column" aria-labelledby="includedHeading">
+            <h3 id="includedHeading" class="list-column__title">Included</h3>
+            <p class="list-column__hint">Drag to reprioritize. Higher rows are checked more often.</p>
+
+            <div class="table-wrap">
+              <table class="channel-table" aria-describedby="summary">
+                <thead>
+                  <tr>
+                    <th scope="col">Priority</th>
+                    <th scope="col">Channel</th>
+                    <th scope="col">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="includedRows"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="list-column" aria-labelledby="excludedHeading">
+            <h3 id="excludedHeading" class="list-column__title">Excluded</h3>
+            <p class="list-column__hint">Excluded channels stay saved and can be re-included anytime.</p>
+
+            <div class="table-wrap">
+              <table class="channel-table channel-table--excluded" aria-describedby="summary">
+                <thead>
+                  <tr>
+                    <th scope="col">Channel</th>
+                    <th scope="col">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="excludedRows"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <p id="status" class="status" hidden></p>
+    </main>
+
+    <script src="options.js"></script>
+  </body>
+</html>

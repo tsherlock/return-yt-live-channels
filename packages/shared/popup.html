@@ -10,29 +10,28 @@
     <main class="app">
       <header class="app-header">
         <h1>Return YouTube Live Subscriptions</h1>
+        <button id="openSettingsBtn" class="button button--secondary app-header__settings">Options</button>
       </header>
 
       <nav class="tabs" role="tablist">
         <button class="tab tab--active" id="tabLive" role="tab" aria-selected="true">Live</button>
-        <button class="tab" id="tabAll" role="tab" aria-selected="false">All Subscriptions</button>
+        <button class="tab" id="tabScan" role="tab" aria-selected="false">Scan</button>
       </nav>
 
       <section class="tab-panel" id="panelLive">
         <div class="channels-toolbar">
           <span id="liveCount" class="channel-count"></span>
-          <button id="refreshLiveBtn">Refresh Live</button>
         </div>
         <p id="liveHint" class="note" hidden></p>
         <ul id="liveList" class="channel-list"></ul>
       </section>
 
-      <section class="tab-panel tab-panel--hidden" id="panelAll">
+      <section class="tab-panel tab-panel--hidden" id="panelScan">
         <div class="channels-toolbar">
-          <span id="channelCount" class="channel-count"></span>
+          <span class="channel-count">Subscription Scanner</span>
           <button id="scanBtn">Scan from YouTube</button>
         </div>
-        <p id="scanHint" class="note">Open https://www.youtube.com/feed/channels, scroll all the way down once to load all subscriptions, then click Scan. Scan adds new channels and updates names/images; Included/Excluded controls whether a channel appears in the Live Subscriptions list; use X for manual removal.</p>
-        <ul id="channelList" class="channel-list"></ul>
+        <p id="scanHint" class="note">Open https://www.youtube.com/feed/channels, scroll all the way down once to load all subscriptions, then click Scan. Channel inclusion and priority are managed in Options.</p>
       </section>
     </main>
 

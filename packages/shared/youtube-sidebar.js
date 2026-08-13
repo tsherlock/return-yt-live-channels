@@ -1,15 +1,15 @@
 const PANEL_ID = "yt-live-subscriptions-panel";
-const DEFAULT_VISIBLE_CHANNELS = 8;
 const AUTO_REFRESH_MS = 30 * 1000;
 const MOUNT_RETRY_DELAYS_MS = [0, 150, 350, 700, 1200, 2000, 3200, 5000];
+const LIVE_CACHE_KEY = "liveChannelsCacheV3";
 
 let allLiveChannels = [];
-let showAllChannels = false;
 let autoRefreshTimer = null;
 let sidebarObserver = null;
 let guideObserver = null;
 let guideObserverTarget = null;
 let mountRunId = 0;
+let lastScanStatus = null;
 
 function removePanelContainer() {
   const panel = document.getElementById(PANEL_ID);
@@ -99,7 +99,23 @@ function ensurePanelMounted(source = "unknown") {
   if (!inserted) {
     return;
   }
-  loadPanelData({ forceRefresh: false });
+
+  renderChannels(allLiveChannels);
+  if (allLiveChannels.length) {
+    if (lastScanStatus?.warmingUp) {
+      setStatus(
+        `Warming up: checked ${lastScanStatus.checkedRecently}/${lastScanStatus.totalChannels} channels this sweep.`
+      );
+    } else {
+      setStatus("");
+    }
+  } else if (lastScanStatus?.warmingUp) {
+    setStatus(
+      `Warming up: checked ${lastScanStatus.checkedRecently}/${lastScanStatus.totalChannels} channels this sweep. Scanning continues in the background.`
+    );
+  } else {
+    setStatus("No recently cached live channels yet. Scanning continues in the background.");
+  }
 }
 
 function findInsertionPoint() {
@@ -167,21 +183,9 @@ function buildPanel() {
   const listEl = document.createElement("ul");
   listEl.className = "yt-live-panel__list";
 
-  const seeAllButton = document.createElement("button");
-  seeAllButton.className = "yt-live-panel__see-all";
-  seeAllButton.type = "button";
-  seeAllButton.hidden = true;
-  seeAllButton.textContent = "See All";
-
   panel.appendChild(header);
   panel.appendChild(statusEl);
   panel.appendChild(listEl);
-  panel.appendChild(seeAllButton);
-
-  seeAllButton.addEventListener("click", () => {
-    showAllChannels = !showAllChannels;
-    renderChannels(allLiveChannels);
-  });
 
   return wrapper;
 }
@@ -195,8 +199,7 @@ function getPanelNodes() {
   return {
     panel,
     status: panel.querySelector(".yt-live-panel__status"),
-    list: panel.querySelector(".yt-live-panel__list"),
-    seeAll: panel.querySelector(".yt-live-panel__see-all")
+    list: panel.querySelector(".yt-live-panel__list")
   };
 }
 
@@ -206,17 +209,6 @@ function sortChannels(channels) {
   sorted.sort((a, b) => a.title.localeCompare(b.title));
 
   return sorted;
-}
-
-function updateSeeAllButton(totalChannels) {
-  const nodes = getPanelNodes();
-  if (!nodes) {
-    return;
-  }
-
-  const shouldShow = totalChannels > DEFAULT_VISIBLE_CHANNELS;
-  nodes.seeAll.hidden = !shouldShow;
-  nodes.seeAll.textContent = showAllChannels ? "Show Less" : "See All";
 }
 
 function renderChannels(channels) {
@@ -229,11 +221,8 @@ function renderChannels(channels) {
   nodes.list.textContent = "";
 
   const sortedChannels = sortChannels(channels);
-  const visibleChannels = showAllChannels
-    ? sortedChannels
-    : sortedChannels.slice(0, DEFAULT_VISIBLE_CHANNELS);
 
-  for (const channel of visibleChannels) {
+  for (const channel of sortedChannels) {
     const item = document.createElement("li");
     item.className = "yt-live-panel__item";
 
@@ -262,8 +251,6 @@ function renderChannels(channels) {
     item.appendChild(meta);
     nodes.list.appendChild(item);
   }
-
-  updateSeeAllButton(sortedChannels.length);
 }
 
 function setStatus(text, isError = false) {
@@ -292,37 +279,104 @@ function fetchLiveChannels(forceRefresh) {
         return;
       }
 
-      resolve(response.liveChannels || []);
+      resolve({
+        channels: response.liveChannels || [],
+        scanStatus: response.scanStatus || null
+      });
       }
     );
   });
 }
 
-async function loadPanelData({ forceRefresh }) {
-  const nodes = getPanelNodes();
-  if (!nodes) {
-    return;
-  }
+function storageGet(keys) {
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.get(keys, (result) => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+        return;
+      }
 
-  const isFirstLoad = !nodes.list.children.length;
-  if (isFirstLoad) {
-    setStatus("Loading live channels...");
-  }
+      resolve(result);
+    });
+  });
+}
 
+async function loadCachedLiveChannels() {
   try {
-    const channels = await fetchLiveChannels(forceRefresh);
+    const result = await storageGet([LIVE_CACHE_KEY]);
+    const record = result[LIVE_CACHE_KEY];
+    const items = Array.isArray(record?.items) ? record.items : [];
 
-    if (!channels.length) {
-      allLiveChannels = [];
-      showAllChannels = false;
-      renderChannels([]);
-      setStatus("None of your subscriptions are live right now.");
+    allLiveChannels = items;
+
+    const nodes = getPanelNodes();
+    if (!nodes) {
       return;
     }
 
+    renderChannels(items);
+    if (items.length) {
+      if (lastScanStatus?.warmingUp) {
+        setStatus(
+          `Warming up: checked ${lastScanStatus.checkedRecently}/${lastScanStatus.totalChannels} channels this sweep.`
+        );
+      } else {
+        setStatus("");
+      }
+    } else if (lastScanStatus?.warmingUp) {
+      setStatus(
+        `Warming up: checked ${lastScanStatus.checkedRecently}/${lastScanStatus.totalChannels} channels this sweep. Scanning continues in the background.`
+      );
+    } else {
+      setStatus("No recently cached live channels yet. Scanning continues in the background.");
+    }
+  } catch {
+    // Ignore cache read failures and let live refresh path recover.
+  }
+}
+
+async function loadPanelData({ forceRefresh }) {
+  const nodes = getPanelNodes();
+  const isFirstLoad = Boolean(nodes && !nodes.list.children.length);
+  if (isFirstLoad) {
+    if (allLiveChannels.length) {
+      renderChannels(allLiveChannels);
+      setStatus("Refreshing live channels...");
+    } else {
+      setStatus("Loading live channels...");
+    }
+  }
+
+  try {
+    const { channels, scanStatus } = await fetchLiveChannels(forceRefresh);
+    lastScanStatus = scanStatus || null;
+
     allLiveChannels = channels;
+
+    if (!nodes) {
+      return;
+    }
+
+    if (!channels.length) {
+      renderChannels([]);
+      if (scanStatus?.warmingUp) {
+        setStatus(
+          `Warming up: checked ${scanStatus.checkedRecently}/${scanStatus.totalChannels} channels this sweep. Scanning continues in the background.`
+        );
+      } else {
+        setStatus("No channels are live right now.");
+      }
+      return;
+    }
+
     renderChannels(channels);
-    setStatus("");
+    if (scanStatus?.warmingUp) {
+      setStatus(
+        `Warming up: checked ${scanStatus.checkedRecently}/${scanStatus.totalChannels} channels this sweep.`
+      );
+    } else {
+      setStatus("");
+    }
   } catch (error) {
     setStatus(`Could not load live subscriptions: ${error.message}`, true);
   }
@@ -396,16 +450,7 @@ function startAutoRefresh() {
   }
 
   autoRefreshTimer = window.setInterval(() => {
-    if (document.hidden) {
-      return;
-    }
-
-    const panel = document.getElementById(PANEL_ID);
-    if (panel && panel.isConnected) {
-      loadPanelData({ forceRefresh: true });
-    } else {
-      queueEnsurePanelMounted("auto-refresh-mount");
-    }
+    void loadPanelData({ forceRefresh: true });
   }, AUTO_REFRESH_MS);
 }
 
@@ -437,5 +482,7 @@ window.addEventListener("yt-page-data-updated", () => {
 (async function bootstrap() {
   queueEnsurePanelMounted("bootstrap");
   watchForSidebar();
+  void loadCachedLiveChannels();
   startAutoRefresh();
+  void loadPanelData({ forceRefresh: true });
 })();

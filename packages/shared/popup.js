@@ -1,4 +1,5 @@
 const CHANNEL_LIST_KEY = "channelListV1";
+const LIVE_CACHE_KEY = "liveChannelsCacheV3";
 
 // These are youtube's official channels like "Shopping", "Music", etc that show up in the sidebar that we want to ignore.
 const EXCLUDED_CHANNEL_PATHS = new Set([
@@ -12,9 +13,9 @@ const EXCLUDED_CHANNEL_PATHS = new Set([
 ]);
 
 const tabLive = document.getElementById("tabLive");
-const tabAll = document.getElementById("tabAll");
+const tabScan = document.getElementById("tabScan");
 const panelLive = document.getElementById("panelLive");
-const panelAll = document.getElementById("panelAll");
+const panelScan = document.getElementById("panelScan");
 
 const refreshLiveBtn = document.getElementById("refreshLiveBtn");
 const liveCount = document.getElementById("liveCount");
@@ -22,55 +23,89 @@ const liveHint = document.getElementById("liveHint");
 const liveList = document.getElementById("liveList");
 
 const scanBtn = document.getElementById("scanBtn");
+const openSettingsBtn = document.getElementById("openSettingsBtn");
 const scanHint = document.getElementById("scanHint");
-const channelList = document.getElementById("channelList");
-const channelCount = document.getElementById("channelCount");
 
 tabLive.addEventListener("click", () => switchTab("live"));
-tabAll.addEventListener("click", () => switchTab("all"));
-refreshLiveBtn.addEventListener("click", () => refreshLiveList(true));
+tabScan.addEventListener("click", () => switchTab("scan"));
+if (refreshLiveBtn) {
+  refreshLiveBtn.addEventListener("click", () => refreshLiveList(true));
+}
 scanBtn.addEventListener("click", scanFromYouTube);
+openSettingsBtn.addEventListener("click", openSettingsPage);
 
 initialize().catch(console.error);
 
 async function initialize() {
   switchTab("live");
-  const channels = await getChannelList();
-  renderAllChannels(channels);
-  await refreshLiveList(false);
+  await loadLiveFromCache();
 }
 
 function switchTab(tab) {
   const isLive = tab === "live";
+  const isScan = tab === "scan";
+
   tabLive.classList.toggle("tab--active", isLive);
-  tabAll.classList.toggle("tab--active", !isLive);
+  tabScan.classList.toggle("tab--active", isScan);
+
   tabLive.setAttribute("aria-selected", String(isLive));
-  tabAll.setAttribute("aria-selected", String(!isLive));
+  tabScan.setAttribute("aria-selected", String(isScan));
+
   panelLive.classList.toggle("tab-panel--hidden", !isLive);
-  panelAll.classList.toggle("tab-panel--hidden", isLive);
+  panelScan.classList.toggle("tab-panel--hidden", !isScan);
 
   if (isLive) {
-    void refreshLiveList(false);
+    void loadLiveFromCache();
+  }
+}
+
+async function loadLiveFromCache() {
+  liveHint.hidden = true;
+
+  const result = await storageGet([LIVE_CACHE_KEY]);
+  const record = result[LIVE_CACHE_KEY];
+  const channels = Array.isArray(record?.items) ? record.items : [];
+
+  renderLiveChannels(channels);
+
+  if (!channels.length) {
+    setLiveHint("No recently cached live channels yet. Keep YouTube open to continue scanning.", false);
   }
 }
 
 async function refreshLiveList(forceRefresh) {
-  refreshLiveBtn.disabled = true;
-  refreshLiveBtn.textContent = "Refreshing…";
+  if (refreshLiveBtn) {
+    refreshLiveBtn.disabled = true;
+    refreshLiveBtn.textContent = "Refreshing…";
+  }
   liveHint.hidden = true;
 
   try {
-    const channels = await fetchLiveChannels(forceRefresh);
+    const { channels, scanStatus } = await fetchLiveChannels(forceRefresh);
     renderLiveChannels(channels);
 
     if (!channels.length) {
-      setLiveHint("None of your included subscriptions are live right now.", false);
+      if (scanStatus?.warmingUp) {
+        setLiveHint(
+          `Warming up: checked ${scanStatus.checkedRecently}/${scanStatus.totalChannels} channels this sweep. Scanning continues in the background.`,
+          false
+        );
+      } else {
+        setLiveHint("No channels are live right now.", false);
+      }
+    } else if (scanStatus?.warmingUp) {
+      setLiveHint(
+        `Live list is warming up: checked ${scanStatus.checkedRecently}/${scanStatus.totalChannels} channels this sweep.`,
+        false
+      );
     }
   } catch (error) {
     setLiveHint(`Could not load live channels: ${error.message}`, true);
   } finally {
-    refreshLiveBtn.disabled = false;
-    refreshLiveBtn.textContent = "Refresh Live";
+    if (refreshLiveBtn) {
+      refreshLiveBtn.disabled = false;
+      refreshLiveBtn.textContent = "Refresh Live";
+    }
   }
 }
 
@@ -155,7 +190,6 @@ async function scanFromYouTube() {
     const merged = Array.from(mergedByPath.values());
 
     await saveChannelList(merged);
-    renderAllChannels(merged);
     refreshLiveIfVisible(true);
 
     setScanHint(
@@ -168,6 +202,16 @@ async function scanFromYouTube() {
     scanBtn.disabled = false;
     scanBtn.textContent = "Scan from YouTube";
   }
+}
+
+function openSettingsPage() {
+  if (typeof chrome.runtime.openOptionsPage === "function") {
+    chrome.runtime.openOptionsPage();
+    return;
+  }
+
+  const optionsUrl = chrome.runtime.getURL("options.html");
+  void tabsCreate({ url: optionsUrl });
 }
 
 async function scrapeSubscriptionsFromChannelsPage() {
@@ -246,78 +290,6 @@ function isYouTubeChannelsPage(url) {
   }
 }
 
-function renderAllChannels(channels) {
-  channelList.textContent = "";
-  const sorted = channels.slice().sort((a, b) => a.title.localeCompare(b.title));
-
-  channelCount.textContent = channels.length
-    ? `${channels.length} channel${channels.length === 1 ? "" : "s"}`
-    : "";
-
-  if (!channels.length) {
-    scanHint.hidden = false;
-    return;
-  }
-
-  scanHint.hidden = true;
-
-  for (const channel of sorted) {
-    const li = document.createElement("li");
-    li.className = "channel-item channel-item--all";
-
-    const img = document.createElement("img");
-    img.className = "channel-item__avatar";
-    img.src = channel.thumbnailUrl || "";
-    img.alt = "";
-
-    const name = document.createElement("span");
-    name.className = "channel-item__name";
-    name.textContent = channel.title;
-
-    const toggleBtn = document.createElement("button");
-    toggleBtn.className = "channel-item__toggle";
-    toggleBtn.textContent = channel.excludeFromLive ? "Excluded" : "Included";
-    toggleBtn.title = channel.excludeFromLive
-      ? "Click to include this channel in the Live Subscriptions list"
-      : "Click to exclude this channel from the Live Subscriptions list";
-
-    toggleBtn.addEventListener("click", async () => {
-      const current = await getChannelList();
-      const updated = current.map((c) => {
-        if (normalizeChannelPath(c.urlPath) !== normalizeChannelPath(channel.urlPath)) {
-          return c;
-        }
-        return { ...c, excludeFromLive: !Boolean(c.excludeFromLive) };
-      });
-
-      await saveChannelList(updated);
-      renderAllChannels(updated);
-      refreshLiveIfVisible(true);
-    });
-
-    const removeBtn = document.createElement("button");
-    removeBtn.className = "channel-item__remove";
-    removeBtn.textContent = "X";
-    removeBtn.title = "Remove this channel from your saved list";
-    removeBtn.addEventListener("click", async () => {
-      const current = await getChannelList();
-      const updated = current.filter(
-        (c) => normalizeChannelPath(c.urlPath) !== normalizeChannelPath(channel.urlPath)
-      );
-
-      await saveChannelList(updated);
-      renderAllChannels(updated);
-      refreshLiveIfVisible(true);
-    });
-
-    li.appendChild(img);
-    li.appendChild(name);
-    li.appendChild(toggleBtn);
-    li.appendChild(removeBtn);
-    channelList.appendChild(li);
-  }
-}
-
 function setScanHint(text, isError) {
   scanHint.hidden = false;
   scanHint.textContent = text;
@@ -351,7 +323,10 @@ function fetchLiveChannels(forceRefresh) {
           return;
         }
 
-        resolve(response.liveChannels || []);
+        resolve({
+          channels: response.liveChannels || [],
+          scanStatus: response.scanStatus || null
+        });
       }
     );
   });

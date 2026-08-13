@@ -25,7 +25,16 @@ body {
 }
 
 .app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   margin-bottom: 10px;
+}
+
+.app-header__settings {
+  padding: 6px 10px;
+  font-size: 0.76rem;
 }
 
 h1 {
@@ -37,6 +46,7 @@ h1 {
 .tabs {
   display: flex;
   gap: 6px;
+  flex-wrap: wrap;
   margin-bottom: 10px;
 }
 
@@ -92,10 +102,6 @@ h1 {
   border-radius: 8px;
 }
 
-.channel-item--all {
-  grid-template-columns: 26px 1fr auto auto;
-}
-
 .channel-item:hover {
   background: rgba(255, 255, 255, 0.05);
 }
@@ -135,30 +141,6 @@ h1 {
   text-decoration: underline;
 }
 
-.channel-item__toggle {
-  border: 1px solid #334155;
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text);
-  font-size: 0.72rem;
-  padding: 4px 8px;
-  border-radius: 999px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.channel-item__remove {
-  border: 1px solid rgba(244, 63, 94, 0.45);
-  background: rgba(244, 63, 94, 0.15);
-  color: #ffd6df;
-  font-size: 0.72rem;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border-radius: 50%;
-  font-weight: 700;
-  cursor: pointer;
-}
-
 button {
   border: 0;
   background: linear-gradient(120deg, var(--accent) 0%, var(--accent-strong) 100%);
@@ -169,6 +151,12 @@ button {
   cursor: pointer;
   font-size: 0.82rem;
   white-space: nowrap;
+}
+
+.button--secondary {
+  border: 1px solid #334155;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
 }
 
 button:disabled {
